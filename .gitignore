@@ -1,0 +1,25 @@
+# Ignore Rust build artifacts
+/target/
+**/*.rs.bk
+
+# Ignore Cargo-specific files 
+.cargo/
+.cargo-lock
+
+# Ignore IDE/editor-specific files
+.idea/
+.vscode/
+*.iml
+
+# Ignore backup and temporary files
+*.swp
+*.swo
+*.bak
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Ignore logs and debug files
+*.log
+debug/
+.openclaude-profile.json

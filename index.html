@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>6502 Raw Test</title>
+</head>
+<body>
+    <h1>6502 Integration Test</h1>
+
+    <div>
+        <h3>Assembly Source</h3>
+        <textarea id="code" rows="10" cols="40">
+LDA #$0A
+STA $0200
+BRK
+        </textarea>
+    </div>
+
+    <div>
+        <button id="btn-load">1. Assemble & Load</button>
+        <button id="btn-step" disabled>2. Step</button>
+    </div>
+
+    <hr>
+
+    <div>
+        <h3>Compiled Machine Code (Hex)</h3>
+        <textarea id="compiled-output" rows="4" cols="40" readonly></textarea>
+    </div>
+
+    <hr>
+
+    <div>
+        <h3>CPU State</h3>
+        <pre id="output">CPU Not Loaded</pre>
+    </div>
+
+    <!-- The standalone assembler -->
+    <script src="assembler.js"></script>
+    <!-- The Wasm integration -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
