@@ -1,0 +1,31 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export const __wbg_cpu_free: (a: number, b: number) => void;
+export const __wbg_get_cpu_program_counter: (a: number) => number;
+export const __wbg_get_cpu_register_a: (a: number) => number;
+export const __wbg_get_cpu_register_x: (a: number) => number;
+export const __wbg_get_cpu_register_y: (a: number) => number;
+export const __wbg_get_cpu_stack_pointer: (a: number) => number;
+export const __wbg_get_cpu_status_register: (a: number) => number;
+export const __wbg_set_cpu_program_counter: (a: number, b: number) => void;
+export const __wbg_set_cpu_register_a: (a: number, b: number) => void;
+export const __wbg_set_cpu_register_x: (a: number, b: number) => void;
+export const __wbg_set_cpu_register_y: (a: number, b: number) => void;
+export const __wbg_set_cpu_stack_pointer: (a: number, b: number) => void;
+export const __wbg_set_cpu_status_register: (a: number, b: number) => void;
+export const cpu_get_memory_slice: (a: number, b: number, c: number) => [number, number];
+export const cpu_get_program_counter: (a: number) => number;
+export const cpu_get_register_a: (a: number) => number;
+export const cpu_get_register_x: (a: number) => number;
+export const cpu_get_register_y: (a: number) => number;
+export const cpu_get_stack_pointer: (a: number) => number;
+export const cpu_get_status_register: (a: number) => number;
+export const cpu_load_program_from_js: (a: number, b: number, c: number) => void;
+export const cpu_new: () => number;
+export const cpu_reset: (a: number) => void;
+export const cpu_step: (a: number) => number;
+export const __wbindgen_externrefs: WebAssembly.Table;
+export const __wbindgen_free: (a: number, b: number, c: number) => void;
+export const __wbindgen_malloc: (a: number, b: number) => number;
+export const __wbindgen_start: () => void;

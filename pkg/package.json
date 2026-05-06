@@ -1,0 +1,15 @@
+{
+  "name": "nesoxide",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "nesoxide_bg.wasm",
+    "nesoxide.js",
+    "nesoxide.d.ts"
+  ],
+  "main": "nesoxide.js",
+  "types": "nesoxide.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
