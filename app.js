@@ -292,7 +292,11 @@ function toggleTheme() {
     const html = document.documentElement;
     html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
     const isNowLight = html.dataset.theme === 'light';
-    document.getElementById('theme-icon').innerHTML = isNowLight ? MOON_SVG : SUN_SVG;
+    const svg = document.getElementById('theme-icon');
+    svg.innerHTML = isNowLight ? MOON_SVG : SUN_SVG;
+    // Moon is a filled shape; sun uses stroked paths
+    svg.setAttribute('fill', isNowLight ? 'currentColor' : 'none');
+    svg.setAttribute('stroke', isNowLight ? 'none' : 'currentColor');
 }
 
 start();
