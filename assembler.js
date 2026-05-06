@@ -3,25 +3,25 @@
 function Labels() {
     var labelIndex = [];
     return {
-        find: function(name) {
+        find: function (name) {
             for (var i = 0; i < labelIndex.length; i++) {
                 if (name === labelIndex[i].split("|")[0]) return true;
             }
             return false;
         },
-        getPC: function(name) {
+        getPC: function (name) {
             for (var i = 0; i < labelIndex.length; i++) {
                 var parts = labelIndex[i].split("|");
                 if (name === parts[0]) return parseInt(parts[1]);
             }
             return -1;
         },
-        push: function(name, addr) {
+        push: function (name, addr) {
             if (this.find(name)) return false;
             labelIndex.push(name + "|" + addr);
             return true;
         },
-        reset: function() {
+        reset: function () {
             labelIndex = [];
         }
     };
@@ -123,7 +123,7 @@ function Assembler() {
                 lines[i] = "";
             }
         }
-        return { lookup: function(k) { return table["__" + k]; } };
+        return { lookup: function (k) { return table["__" + k]; } };
     }
 
     function assembleLine(input, currentPC, symbols, output) {
@@ -132,7 +132,7 @@ function Assembler() {
             input = input.replace(/^\w+:\s*/, "");
         }
         if (input === "") return true;
-        
+
         var m = input.match(/^(\w+)\s+(.*)$/);
         if (m) {
             command = m[1].toUpperCase();
@@ -145,16 +145,16 @@ function Assembler() {
         for (var o = 0; o < Opcodes.length; o++) {
             if (Opcodes[o][0] === command) {
                 var op = Opcodes[o];
-                
+
                 // Single (Implied/Accumulator) -- Fixed missing output array
                 if (op[11] !== null && (param === "" || param === "A")) { output.push(op[11]); return true; }
-                
+
                 // Immediate
                 if (op[1] !== null && param.match(/^#/)) {
                     var val = tryParseByte(param.substring(1), symbols);
                     if (val !== -1) { output.push(op[1], val); return true; }
                 }
-                
+
                 // Zero Page X/Y
                 if (op[3] !== null && param.match(/,X$/i)) {
                     var val = tryParseByte(param.replace(/,X$/i, ""), symbols);
@@ -164,7 +164,7 @@ function Assembler() {
                     var val = tryParseByte(param.replace(/,Y$/i, ""), symbols);
                     if (val !== -1) { output.push(op[4], val); return true; }
                 }
-                
+
                 // Zero Page
                 if (op[2] !== null) {
                     var val = tryParseByte(param, symbols);
@@ -194,7 +194,7 @@ function Assembler() {
                     if (labels.getPC(param) !== -1) { var a = labels.getPC(param); output.push(op[5], a & 0xff, (a >> 8) & 0xff); return true; }
                     if (param.match(/^[A-Za-z_]/)) { output.push(op[5], 0x00, 0x00); return true; } // Pass 1 fallback
                 }
-                
+
                 // Indirect X/Y
                 if (op[9] !== null && param.match(/^\(.*\),X$/i)) {
                     var val = tryParseByte(param.replace(/^\((.*)\),X$/i, "$1"), symbols);
@@ -204,7 +204,7 @@ function Assembler() {
                     var val = tryParseByte(param.replace(/^\((.*?)\),Y$/i, "$1"), symbols);
                     if (val !== -1) { output.push(op[10], val); return true; }
                 }
-                
+
                 // Indirect
                 if (op[8] !== null && param.match(/^\(.*?\)$/)) {
                     var val = tryParseWord(param.replace(/^\((.*?)\)$/, "$1"), symbols);
@@ -229,7 +229,7 @@ function Assembler() {
     }
 
     return {
-        assemble: function(codeString) {
+        assemble: function (codeString) {
             var lines = codeString.split("\n");
             labels.reset();
             var symbols = preprocess(lines);
@@ -265,7 +265,7 @@ function Assembler() {
     };
 }
 
-window.assemble6502 = function(codeString) {
+window.assemble6502 = function (codeString) {
     var assembler = Assembler();
     var result = assembler.assemble(codeString);
     if (result.error) {
@@ -273,4 +273,10 @@ window.assemble6502 = function(codeString) {
         return [];
     }
     return result.bytes;
+};
+
+
+window.assemble6502 = function (codeString) {
+    var assembler = Assembler();
+    return assembler.assemble(codeString);
 };

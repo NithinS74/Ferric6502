@@ -1,42 +1,611 @@
 <!DOCTYPE html>
-<html>
+<html data-theme="dark">
 <head>
-    <title>6502 Raw Test</title>
+    <meta charset="UTF-8">
+    <title>MOS 6502 Emulator</title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:          #0d0d0f;
+            --surface:     #141417;
+            --surface2:    #1c1c21;
+            --surface3:    #242429;
+            --border:      #2a2a31;
+            --border2:     #35353e;
+            --text:        #e8e8ed;
+            --text2:       #9898a6;
+            --text3:       #5a5a6a;
+            --accent:      #3b82f6;
+            --accent-dim:  rgba(59,130,246,0.15);
+            --accent-glow: rgba(59,130,246,0.35);
+            --green:       #34d399;
+            --amber:       #fbbf24;
+            --red:         #f87171;
+            --sp-row:      rgba(59,130,246,0.12);
+            --sp-border:   rgba(59,130,246,0.5);
+            --radius:      8px;
+            --radius-lg:   12px;
+        }
+        [data-theme="light"] {
+            --bg:       #f0f0f3;
+            --surface:  #ffffff;
+            --surface2: #f5f5f8;
+            --surface3: #ebebef;
+            --border:   #dddde5;
+            --border2:  #ccccd6;
+            --text:     #111118;
+            --text2:    #555566;
+            --text3:    #9999aa;
+        }
+
+        html, body { height: 100%; }
+        body {
+            font-family: 'IBM Plex Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── NAV ─────────────────────────────────────────────── */
+        nav {
+            height: 52px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            gap: 32px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-brand {
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--text);
+            white-space: nowrap;
+        }
+        .nav-tabs {
+            display: none;
+        }
+        .nav-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 16px;
+            border-radius: var(--radius);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 13px; font-weight: 500;
+            cursor: pointer;
+            transition: opacity .15s, transform .1s, background .15s, box-shadow .15s;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 0 0 0 var(--accent-glow);
+        }
+        .btn-primary:hover:not(:disabled) {
+            box-shadow: 0 0 18px var(--accent-glow);
+        }
+        .btn-ghost {
+            background: transparent;
+            color: var(--text2);
+            border-color: var(--border2);
+        }
+        .btn-ghost:hover:not(:disabled) { color: var(--text); background: var(--surface2); }
+        .btn-icon {
+            width: 34px; height: 34px;
+            padding: 0; display: flex; align-items: center; justify-content: center;
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text2); border-radius: var(--radius);
+            cursor: pointer; transition: color .15s, background .15s;
+        }
+        .btn-icon:hover { color: var(--text); background: var(--surface2); }
+        .btn-icon svg { width: 16px; height: 16px; }
+
+        /* ── MAIN LAYOUT ─────────────────────────────────────── */
+        .workspace {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 350px 350px;
+            gap: 0;
+            overflow: hidden;
+            height: calc(100vh - 52px - 36px);
+        }
+
+        /* ── LEFT PANE ───────────────────────────────────────── */
+        .left-pane {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            overflow-y: auto;
+            border-right: 1px solid var(--border);
+        }
+        .panel {
+            display: flex;
+            flex-direction: column;
+            background: var(--surface);
+        }
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .panel-title {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: .08em;
+            color: var(--text3);
+            text-transform: uppercase;
+        }
+        .editor-panel {
+            flex: 1;
+            min-height: 0;
+            border-bottom: 1px solid var(--border);
+        }
+        #code {
+            width: 100%;
+            height: 100%;
+            background: var(--surface);
+            color: var(--text);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 13px;
+            line-height: 1.7;
+            padding: 16px;
+            border: none;
+            outline: none;
+            resize: none;
+            tab-size: 4;
+        }
+        .hex-panel { height: 130px; flex-shrink: 0; }
+        #compiled-output {
+            flex: 1;
+            width: 100%;
+            background: var(--surface2);
+            color: var(--green);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            padding: 12px 16px;
+            border: none;
+            outline: none;
+            resize: none;
+        }
+
+        /* ── RIGHT PANE ──────────────────────────────────────── */
+        .right-pane {
+            display: flex;
+            flex-direction: column;
+            background: var(--surface);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .cpu-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px 12px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .cpu-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .cpu-status {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 3px 10px;
+            border-radius: 20px;
+            background: var(--surface3);
+            color: var(--text2);
+            border: 1px solid var(--border);
+            transition: background .3s, color .3s;
+        }
+        .cpu-status.running { background: rgba(52,211,153,.1); color: var(--green); border-color: rgba(52,211,153,.3); }
+        .cpu-status.halted  { background: rgba(248,113,113,.1); color: var(--red);   border-color: rgba(248,113,113,.3); }
+
+        /* ── REGISTERS ───────────────────────────────────────── */
+        .section { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+        .section-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--text3);
+            margin-bottom: 12px;
+        }
+        .regs-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .reg-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 10px 14px;
+            transition: border-color .2s;
+        }
+        .reg-card.wide { grid-column: 1 / -1; }
+        .reg-card.changed { border-color: var(--accent); background: var(--accent-dim); }
+        .reg-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            color: var(--text3);
+            margin-bottom: 4px;
+        }
+        .reg-value {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text);
+            transition: color .2s;
+        }
+        .reg-card.wide .reg-value { color: var(--accent); font-size: 22px; }
+
+        /* ── FLAGS ───────────────────────────────────────────── */
+        .flags-row {
+            display: flex;
+            gap: 6px;
+        }
+        .flag-cell {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .flag-name {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            color: var(--text3);
+            font-weight: 500;
+        }
+        .flag-dot {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: var(--surface3);
+            border: 1px solid var(--border2);
+            transition: background .2s, border-color .2s, box-shadow .2s;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 9px;
+            color: var(--text3);
+        }
+        .flag-dot.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 8px var(--accent-glow);
+            color: #fff;
+        }
+
+        /* ── STACK MEMORY ────────────────────────────────────── */
+        .stack-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .stack-table tr {
+            border-bottom: 1px solid var(--border);
+            transition: background .15s;
+        }
+        .stack-table tr:last-child { border-bottom: none; }
+        .stack-table td {
+            padding: 6px 0;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+        }
+        .stack-table .addr { color: var(--text2); }
+        .stack-table .val  { color: var(--text); text-align: right; }
+        .stack-row-sp {
+            background: var(--sp-row);
+        }
+        .stack-row-sp td { color: var(--accent) !important; }
+        .sp-badge {
+            font-size: 10px;
+            background: var(--accent);
+            color: #fff;
+            padding: 1px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+
+        /* ── TRACE LOG ───────────────────────────────────────── */
+        .trace-section {
+            padding: 16px 20px;
+        }
+        .trace-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .trace-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+        }
+        .trace-table th {
+            text-align: left;
+            color: var(--text3);
+            font-weight: 500;
+            letter-spacing: .06em;
+            padding: 0 0 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .trace-table td {
+            padding: 5px 0;
+            color: var(--text2);
+            border-bottom: 1px solid var(--border);
+        }
+        .trace-table tr:last-child td { border-bottom: none; }
+        .trace-table tr.current-row td { color: var(--text); background: var(--surface2); }
+        .trace-table tr.current-row td:first-child { color: var(--accent); }
+        .trace-mnemonic { color: var(--accent) !important; }
+        .trace-store    { color: var(--amber) !important; }
+        .tr-clear {
+            font-size: 11px;
+            color: var(--text3);
+            background: none; border: none;
+            cursor: pointer; font-family: inherit;
+            padding: 0;
+        }
+        .tr-clear:hover { color: var(--text2); }
+
+        /* ── EMPTY STATE ─────────────────────────────────────── */
+        .empty-trace {
+            color: var(--text3);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        /* ── SCROLLBAR ───────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+        /* ── FOOTER ──────────────────────────────────────────── */
+        footer {
+            height: 36px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            gap: 16px;
+            font-size: 11px;
+            color: var(--text3);
+            flex-shrink: 0;
+        }
+        footer span:first-child { font-weight: 500; color: var(--text2); }
+        .footer-links { margin-left: auto; display: flex; gap: 16px; }
+        .footer-links a { color: var(--text3); text-decoration: none; }
+        .footer-links a:hover { color: var(--text2); }
+
+        /* ── HALTED OVERLAY LINE ─────────────────────────────── */
+        #halt-banner {
+            display: none;
+            background: rgba(248,113,113,.1);
+            border-top: 1px solid rgba(248,113,113,.3);
+            color: var(--red);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            padding: 6px 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        #halt-banner.visible { display: block; }
+
+        /* ── CYCLE COUNTER ───────────────────────────────────── */
+        .cycle-badge {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            color: var(--text3);
+            margin-right: 8px;
+        }
+    </style>
 </head>
 <body>
-    <h1>6502 Integration Test</h1>
 
-    <div>
-        <h3>Assembly Source</h3>
-        <textarea id="code" rows="10" cols="40">
-LDA #$0A
-STA $0200
-BRK
-        </textarea>
+<nav>
+    <span class="nav-brand">MOS 6502 Emulator</span>
+    <div class="nav-actions">
+        <span class="cycle-badge" id="cycle-counter">Cycle: 0</span>
+        <button class="btn btn-ghost" id="btn-reset">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">
+                <path d="M2 8a6 6 0 1 0 1.5-3.9" stroke-linecap="round"/>
+                <path d="M2 4v4h4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Reset
+        </button>
+        <button class="btn btn-primary" id="btn-load">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">
+                <polygon points="5,3 13,8 5,13" fill="currentColor" stroke="none"/>
+            </svg>
+            Assemble &amp; Load
+        </button>
+        <button class="btn-icon" id="btn-theme" title="Toggle theme">
+            <svg id="theme-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.42 1.42M11.53 11.53l1.42 1.42M3.05 12.95l1.42-1.42M11.53 4.47l1.42-1.42"/>
+                <circle cx="8" cy="8" r="3"/>
+            </svg>
+        </button>
+    </div>
+</nav>
+
+<div class="workspace">
+
+    <!-- LEFT: Editor + Hex -->
+    <div class="left-pane">
+        <div class="panel editor-panel">
+            <div class="panel-header">
+                <span class="panel-title">Source Code (main.asm)</span>
+                <button class="btn-icon" title="Copy code">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="5" y="5" width="9" height="9" rx="1.5"/>
+                        <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2H3.5A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/>
+                    </svg>
+                </button>
+            </div>
+            <textarea id="code" spellcheck="false">; MOS 6502 Example
+START:
+    LDX #$00        ; Initialize X to 0
+    LDA #$FF        ; Load $FF into A
+    STA $0200       ; Store A at $0200
+    INX             ; Increment X
+    CPX #$0A        ; Compare X with 10
+    BNE START       ; Loop if not equal
+    BRK             ; Halt</textarea>
+        </div>
+
+        <div id="halt-banner">⚠ Execution halted — BRK instruction reached</div>
+
+        <div class="panel hex-panel">
+            <div class="panel-header">
+                <span class="panel-title">Machine Code (Hex)</span>
+                <button class="btn-icon" title="Copy hex">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="2" y="5" width="8" height="9" rx="1.5"/>
+                        <path d="M5 5V3.5A1.5 1.5 0 0 1 6.5 2h6A1.5 1.5 0 0 1 14 3.5v6A1.5 1.5 0 0 1 12.5 11H11"/>
+                    </svg>
+                </button>
+            </div>
+            <textarea id="compiled-output" readonly placeholder="Compiled bytes appear here after assembling..."></textarea>
+        </div>
     </div>
 
-    <div>
-        <button id="btn-load">1. Assemble & Load</button>
-        <button id="btn-step" disabled>2. Step</button>
+    <!-- MIDDLE: Instruction Trace -->
+    <div class="middle-pane" style="display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--surface); overflow: hidden;">
+        <div class="panel-header">
+            <span class="panel-title">Instruction Trace</span>
+            <button class="tr-clear" id="btn-clear-trace">Clear</button>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: 16px 20px;">
+            <table class="trace-table" id="trace-table">
+                <thead>
+                    <tr>
+                        <th>PC</th>
+                        <th>Hex</th>
+                        <th>Instr</th>
+                        <th>A</th>
+                        <th>Flags</th>
+                    </tr>
+                </thead>
+                <tbody id="trace-body">
+                    <tr><td colspan="5" class="empty-trace" style="border:none">No instructions executed yet</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <hr>
+    <!-- RIGHT: CPU State -->
+    <div class="right-pane" id="right-pane">
 
-    <div>
-        <h3>Compiled Machine Code (Hex)</h3>
-        <textarea id="compiled-output" rows="4" cols="40" readonly></textarea>
+        <div class="cpu-header">
+            <span class="cpu-title">CPU State</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <span class="cpu-status" id="cpu-status">Idle</span>
+                <button class="btn btn-ghost" id="btn-step" disabled title="Step (F8)">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13">
+                        <path d="M4 3l6 5-6 5V3z" fill="currentColor" stroke="none"/>
+                        <line x1="12" y1="3" x2="12" y2="13" stroke-linecap="round"/>
+                    </svg>
+                    Step
+                </button>
+            </div>
+        </div>
+
+        <!-- REGISTERS -->
+        <div class="section">
+            <div class="section-label">Registers</div>
+            <div class="regs-grid">
+                <div class="reg-card wide" id="card-pc">
+                    <div class="reg-label">Program Counter (PC)</div>
+                    <div class="reg-value" id="reg-pc">$0000</div>
+                </div>
+                <div class="reg-card" id="card-sp">
+                    <div class="reg-label">Stack Pointer (SP)</div>
+                    <div class="reg-value" id="reg-sp">$FF</div>
+                </div>
+                <div class="reg-card" id="card-a">
+                    <div class="reg-label">Accumulator (A)</div>
+                    <div class="reg-value" id="reg-a">$00</div>
+                </div>
+                <div class="reg-card" id="card-x">
+                    <div class="reg-label">X Register</div>
+                    <div class="reg-value" id="reg-x">$00</div>
+                </div>
+                <div class="reg-card" id="card-y">
+                    <div class="reg-label">Y Register</div>
+                    <div class="reg-value" id="reg-y">$00</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATUS FLAGS -->
+        <div class="section">
+            <div class="section-label">Status Flags (P)</div>
+            <div class="flags-row">
+                <div class="flag-cell"><div class="flag-name">N</div><div class="flag-dot" id="flag-N">0</div></div>
+                <div class="flag-cell"><div class="flag-name">V</div><div class="flag-dot" id="flag-V">0</div></div>
+                <div class="flag-cell"><div class="flag-name">–</div><div class="flag-dot" id="flag-U">0</div></div>
+                <div class="flag-cell"><div class="flag-name">B</div><div class="flag-dot" id="flag-B">0</div></div>
+                <div class="flag-cell"><div class="flag-name">D</div><div class="flag-dot" id="flag-D">0</div></div>
+                <div class="flag-cell"><div class="flag-name">I</div><div class="flag-dot" id="flag-I">0</div></div>
+                <div class="flag-cell"><div class="flag-name">Z</div><div class="flag-dot" id="flag-Z">0</div></div>
+                <div class="flag-cell"><div class="flag-name">C</div><div class="flag-dot" id="flag-C">0</div></div>
+            </div>
+        </div>
+
+        <!-- STACK -->
+        <div class="section">
+            <div class="section-label">Stack Memory ($0100–$01FF)</div>
+            <table class="stack-table" id="stack-table">
+                <tbody id="stack-body">
+                    <tr><td class="addr" colspan="2" style="color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:20px 0;text-align:center;">— no program loaded —</td></tr>
+                </tbody>
+            </table>
+        </div>
+
     </div>
+</div>
 
-    <hr>
-
-    <div>
-        <h3>CPU State</h3>
-        <pre id="output">CPU Not Loaded</pre>
+<footer>
+    <span>Ferric6502</span>
+    <span>© 2026 Nithin S</span>
+    <div class="footer-links">
+        <a href="https://en.wikipedia.org/wiki/MOS_Technology_6502" target="_blank" rel="noopener">Architecture Specs</a>
+        <a href="https://www.nesdev.org/obelisk-6502-guide/reference.html" target="_blank" rel="noopener">Instruction Set</a>
+        <a href="https://github.com/NithinS74/Ferric6502" target="_blank" rel="noopener">GitHub</a>
     </div>
+</footer>
 
-    <!-- The standalone assembler -->
-    <script src="assembler.js"></script>
-    <!-- The Wasm integration -->
-    <script type="module" src="app.js"></script>
+<script src="assembler.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
