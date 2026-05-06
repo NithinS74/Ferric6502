@@ -63,16 +63,6 @@ python3 -m http.server 8000
 
 > **Note:** You must serve via HTTP (not `file://`) because browsers block WASM loading from local file paths.
 
-### Deploy to Vercel
-
-This project is deployment-ready for Vercel with zero configuration:
-
-1. Push your code to GitHub
-2. Go to [vercel.com](https://vercel.com) → **Add New Project** → Import your repo
-3. Leave the framework preset as **Other** — no build command needed
-4. Click **Deploy**
-
-Every push to `master` will automatically redeploy.
 
 ## How to Use
 
